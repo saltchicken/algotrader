@@ -5,7 +5,7 @@ description = "Lumibot trading bot using Alpaca for data and IBKR for execution"
 dependencies = [
     "lumibot",
     "alpaca-py",
-    "ibapi",
+    "ib_async",
     "pandas",
     "lxml",
     "scikit-learn",
@@ -14,3 +14,12 @@ dependencies = [
     "pytz"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [
+  "src"
+]
