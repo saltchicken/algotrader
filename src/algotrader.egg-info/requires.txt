@@ -1,9 +1,0 @@
-lumibot
-alpaca-py
-ibapi
-pandas
-lxml
-scikit-learn
-python-dotenv
-joblib
-pytz
