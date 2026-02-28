@@ -50,17 +50,28 @@ def add_technical_indicators(
     data['rsi_14'] = 100 - (100 / (1 + rs))
 
     ###
-    # --- Machine Learning Features ---
+    # --- Programmatic Machine Learning Features ---
     ###
+    
+    # Set defaults if none provided
+    lag_columns = ['returns']
+    lags = [1, 2, 5]
 
-    # Lagged returns (How did the stock do yesterday, and the day before?)
-    data['return_lag_1'] = data['returns'].shift(1)
-    data['return_lag_2'] = data['returns'].shift(2)
-    data['return_lag_5'] = data['returns'].shift(5) # 1 week ago
+    new_lag_features = {}
+    
+    for col in lag_columns:
+        if col in data.columns:
+            for lag in lags:
+                col_name = f"{col}_lag_{lag}"
+                new_lag_features[col_name] = data[col].shift(lag)
+        else:
+            print(f"Warning: Column '{col}' not found. Skipping lags for this feature.")
 
-    # TARGET VARIABLE: Next day's return (for training ML models)
-    # Note: This will be NaN for the very last row (today), which is exactly what you 
-    # want when predicting tomorrow's movement in production!
+    data = data.assign(**new_lag_features)
+
+    ###
+    # Target Variables
+    ###
     data['target_next_day_return'] = data['returns'].shift(-1)
     data['target_direction'] = np.where(data['target_next_day_return'] > 0, 1, 0)
 
