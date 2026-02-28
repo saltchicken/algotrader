@@ -17,6 +17,7 @@ def add_technical_indicators(
 
     # Price Returns
     data["returns"] = data["close"].pct_change()
+    data["direction"] = np.where(data["returns"] > 0, 1, -1)
 
     # Simple Moving Averages
     data["sma50"] = data["close"].rolling(window=50).mean()
@@ -74,6 +75,6 @@ def add_technical_indicators(
     # Target Variables
     ###
     data['target_next_day_return'] = data['returns'].shift(-1)
-    data['target_direction'] = np.where(data['target_next_day_return'] > 0, 1, 0)
+    data['target_direction'] = np.where(data['target_next_day_return'] > 0, 1, -1)
 
     return data

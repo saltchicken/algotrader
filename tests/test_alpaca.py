@@ -6,7 +6,7 @@ from algotrader.features.indicators import add_technical_indicators
 def test_alpaca_historical_data_and_features():
     """Test fetching historical data from Alpaca and generating features."""
     alpaca = AlpacaDataClient()
-    target_symbol = "MSFT"
+    target_symbol = "AAPL"
 
     end_dt = datetime.now()
     start_dt = end_dt - timedelta(days=365)
