@@ -28,11 +28,12 @@ def add_technical_indicators(
     ema_slow = data["close"].ewm(span=slow_period, adjust=False).mean()
 
     data["macd"] = ema_fast - ema_slow
-    data["signal"] = data["macd"].ewm(span=signal_period, adjust=False).mean()
+    data["macd_signal"] = data["macd"].ewm(span=signal_period, adjust=False).mean()
 
-    # Trading Signals (1 for Buy, 0 for neutral/sell)
-    data["buy_signal"] = np.where(data["macd"] > data["signal"], 1, 0)
-    data["sell_signal"] = np.where(data["macd"] < data["signal"], 1, 0)
+    neutral_threshold = 0.1
+    macd_diff = data["macd"] - data["macd_signal"]
+    data["macd_trading_signal"] = np.where(macd_diff > neutral_threshold, 1, 
+                                      np.where(macd_diff < -neutral_threshold, -1, 0))
 
     # Bollinger Bands
     data['bb_middle'] = data['close'].rolling(window=20).mean()
