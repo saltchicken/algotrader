@@ -1,0 +1,16 @@
+[project]
+name = "algotrader"
+version = "0.1.0"
+description = "Lumibot trading bot using Alpaca for data and IBKR for execution"
+dependencies = [
+    "lumibot",
+    "alpaca-py",
+    "ibapi",
+    "pandas",
+    "lxml",
+    "scikit-learn",
+    "python-dotenv",
+    "joblib",
+    "pytz"
+]
+

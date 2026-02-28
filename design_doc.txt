@@ -1,0 +1,6 @@
+Components:
+
+alpaca_api.py
+Alpaca Client for connecting to Alpaca API for historical data.
+
+
