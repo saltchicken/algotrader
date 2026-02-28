@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from algotrader.external_api.alpaca_api import AlpacaDataClient
 
+
 def test_alpaca_historical_data():
     """Test fetching historical data from Alpaca."""
     alpaca = AlpacaDataClient()
@@ -18,7 +19,7 @@ def test_alpaca_historical_data():
 
         print("\n--- Historical Data ---")
         print(df)
-        
+
         # Simple assertion to ensure data is returned if using pytest
         assert df is not None
         assert not df.empty
@@ -26,6 +27,7 @@ def test_alpaca_historical_data():
     except Exception as e:
         print(f"An error occurred: {e}")
         raise
+
 
 if __name__ == "__main__":
     test_alpaca_historical_data()
