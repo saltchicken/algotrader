@@ -29,5 +29,3 @@ def handle_debug(args):
 
     print(df_featured)
     df_featured.tail(50).to_csv(f"{target_symbol}_features.csv")
-
-
