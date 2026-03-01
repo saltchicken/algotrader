@@ -1,6 +1,40 @@
 import logging
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+def setup_parser(subparsers):
+    """Sets up the argparse subparser for the 'train' command."""
+    parser = subparsers.add_parser(
+        "train", help="Train the ML model on historical data"
+    )
+
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        required=True,
+        help="Stock symbol to train on (e.g., AAPL)",
+    )
+
+    # Default to 1 year ago for start date
+    default_start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+    default_end = datetime.now().strftime("%Y-%m-%d")
+
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        default=default_start,
+        help="Start date for training data (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        default=default_end,
+        help="End date for training data (YYYY-MM-DD)",
+    )
+
+    parser.set_defaults(func=handle_train)
 
 
 def handle_train(args):
