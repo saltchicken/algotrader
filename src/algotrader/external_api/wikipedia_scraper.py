@@ -3,7 +3,7 @@ from algotrader.logger import get_logger
 
 logger = get_logger(__name__)
 
-def get_sp500_tickers():
+def get_sp500_symbols():
     """Scrapes the current S&P 500 tickers from Wikipedia."""
     logger.info("Fetching S&P 500 tickers from Wikipedia...")
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
