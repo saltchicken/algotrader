@@ -5,6 +5,7 @@ from algotrader.logger import setup_logging, get_logger
 
 from algotrader.train import setup_parser as setup_train_parser
 from algotrader.trade import setup_parser as setup_trade_parser
+from algotrader.research import setup_parser as setup_research_parser
 
 setup_logging()
 logger = get_logger(__name__)
@@ -25,6 +26,7 @@ def main():
 
     setup_train_parser(subparsers)
     setup_trade_parser(subparsers)
+    setup_research_parser(subparsers)
 
     args = parser.parse_args()
 

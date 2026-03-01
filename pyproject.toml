@@ -5,6 +5,7 @@ description = "Machine learning trading bot using Alpaca for data and IBKR for e
 dependencies = [
     "alpaca-py",
     "ib_async",
+    "finviz",
     "pandas",
     "lxml",
     "scikit-learn",
