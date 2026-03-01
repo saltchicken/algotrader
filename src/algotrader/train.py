@@ -4,7 +4,6 @@ from algotrader.external_api.wikipedia_scraper import get_sp500_symbols
 
 from algotrader.external_api.alpaca_api import AlpacaDataClient
 
-
 logger = get_logger(__name__)
 
 
@@ -66,7 +65,6 @@ def handle_train(args):
     for sym in symbols:
         df = alpaca.get_historical_bars(sym, start_dt, end_dt)
         print(df)
-
 
     # TODO: Fetch historical data using args.symbol, args.start_date, args.end_date
     # TODO: Apply feature engineering from algotrader.features.indicators
