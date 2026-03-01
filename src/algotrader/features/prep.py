@@ -9,6 +9,11 @@ FEATURE_COLUMNS = [
     "volatility",
     "rsi",
     "dist_sma20",
+    "volume_change",
+    "macd",
+    "macd_signal",
+    "bb_width",
+    "atr_norm"
 ]
 
 
