@@ -14,20 +14,11 @@ from algotrader.features.prep import (
     create_lstm_sequences,
 )
 from algotrader.models.lstm import LSTMTradingNet, train_lstm_with_early_stopping
+from algotrader.external_api.tickers import get_sp500_tickers
+
 
 logger = get_logger(__name__)
 SEQ_LENGTH = 10
-
-
-def get_sp500_tickers():
-    """Scrapes the current S&P 500 tickers from Wikipedia."""
-    logger.info("Fetching S&P 500 tickers from Wikipedia...")
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    table = pd.read_html(url, storage_options={"User-Agent": "Mozilla/5.0"})[0]
-    tickers = table["Symbol"].tolist()
-    # Clean up tickers for Alpaca compatibility (e.g., BRK.B -> BRK-B)
-    tickers = [t.replace(".", "-") for t in tickers]
-    return tickers
 
 
 def setup_parser(subparsers):

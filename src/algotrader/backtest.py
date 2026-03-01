@@ -10,7 +10,7 @@ from algotrader.logger import get_logger
 from algotrader.external_api.alpaca_api import AlpacaDataClient
 from algotrader.features.prep import get_features, FEATURE_COLUMNS
 from algotrader.models.lstm import LSTMTradingNet
-from algotrader.train import get_sp500_tickers
+from algotrader.external_api.tickers import get_sp500_tickers
 
 logger = get_logger(__name__)
 SEQ_LENGTH = 10
