@@ -42,6 +42,7 @@ def get_features(df):
     data["sma_20"] = data["close"].rolling(window=20).mean()
     data["dist_sma20"] = (data["close"] - data["sma_20"]) / data["sma_20"]
 
+    # volume_change can generate inf if previous day's volume was 0
     data["volume_change"] = data["volume"].pct_change()
 
     # 2. MACD (Measures trend acceleration/deceleration)
@@ -59,7 +60,10 @@ def get_features(df):
     true_range = data["high"] - data["low"]
     data["atr_norm"] = true_range.rolling(window=14).mean() / data["close"]
 
-    # Drop rows with NaN from rolling calculations
+    # Replace inf/-inf with NaN so dropna() can properly clean up division by zero anomalies
+    data.replace([np.inf, -np.inf], np.nan, inplace=True)
+    
+    # Drop rows with NaN from rolling calculations and inf replacements
     data = data.dropna()
     return data
 
