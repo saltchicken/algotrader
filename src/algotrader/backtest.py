@@ -24,6 +24,7 @@ def setup_parser(subparsers):
     default_start = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
 
     parser.add_argument("--num-stocks", type=int, default=10, help="Number of random stocks to backtest")
+    parser.add_argument("--symbol", type=str, default=None, help="Specific stock symbol to backtest (e.g., AAPL). Overrides --num-stocks")
     parser.add_argument("--start-date", type=str, default=default_start, help="Start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default=default_end, help="End date (YYYY-MM-DD)")
     parser.add_argument("--threshold", type=float, default=0.85, help="Probability threshold for trade entry")
@@ -33,7 +34,7 @@ def setup_parser(subparsers):
     parser.add_argument("--model-prefix", type=str, default="sp500", help="Prefix of the saved model")
     
     # Portfolio Configuration
-    parser.add_argument("--initial-capital", type=float, default=10000.0, help="Starting portfolio cash balance")
+    parser.add_argument("--initial-capital", type=float, default=50000.0, help="Starting portfolio cash balance")
     parser.add_argument("--position-size", type=float, default=0.10, help="Pct of current equity to risk per trade (e.g. 0.10 = 10%)")
     
     parser.set_defaults(func=handle_backtest)
@@ -62,11 +63,14 @@ def handle_backtest(args):
     start_dt = datetime.strptime(args.start_date, "%Y-%m-%d")
     end_dt = datetime.strptime(args.end_date, "%Y-%m-%d")
 
-    all_tickers = get_sp500_tickers()
-    selected_tickers = random.sample(all_tickers, min(args.num_stocks, len(all_tickers)))
+    if args.symbol:
+        selected_tickers = [args.symbol.upper()]
+        logger.info(f"Fetching data for specific stock: {selected_tickers[0]}...")
+    else:
+        all_tickers = get_sp500_tickers()
+        selected_tickers = random.sample(all_tickers, min(args.num_stocks, len(all_tickers)))
+        logger.info(f"Fetching data for {len(selected_tickers)} random stocks...")
     
-    logger.info(f"Fetching data for {len(selected_tickers)} random stocks...")
-
     market_data = {}
     all_dates = set()
 
