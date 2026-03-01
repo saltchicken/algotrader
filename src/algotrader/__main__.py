@@ -3,6 +3,7 @@ import logging
 
 from algotrader.train import setup_parser as setup_train_parser
 from algotrader.trade import setup_parser as setup_trade_parser
+from algotrader.debug import setup_parser as setup_debug_parser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -27,6 +28,7 @@ def main():
 
     setup_train_parser(subparsers)
     setup_trade_parser(subparsers)
+    setup_debug_parser(subparsers)
 
     args = parser.parse_args()
 
