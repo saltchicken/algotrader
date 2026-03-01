@@ -12,13 +12,3 @@ dependencies = [
     "joblib",
     "pytz"
 ]
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
-]
-
-[tool.pytest.ini_options]
-pythonpath = [
-  "src"
-]
