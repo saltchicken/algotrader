@@ -14,11 +14,6 @@ def setup_parser(subparsers):
     parser.add_argument(
         "--quantity", type=int, default=1, help="Base quantity of shares to trade"
     )
-    parser.add_argument(
-        "--live",
-        action="store_true",
-        help="Run in LIVE trading mode (connects to port 7496)",
-    )
 
     parser.set_defaults(func=handle_trade)
 
@@ -26,7 +21,6 @@ def setup_parser(subparsers):
 def handle_trade(args):
     """Handler for the 'trade' command."""
     logger.info(f"Starting trading bot for symbol: {args.symbol}")
-    logger.info(f"Mode: {'LIVE' if args.live else 'PAPER'}")
     logger.warning("Trade logic is not implemented yet.")
 
     ibkr = IBKRTradeClient()
