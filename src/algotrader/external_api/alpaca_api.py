@@ -5,6 +5,10 @@ from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockBarsRequest
 from alpaca.data.timeframe import TimeFrame
 
+from algotrader.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class AlpacaDataClient:
     def __init__(self):
@@ -27,7 +31,7 @@ class AlpacaDataClient:
         """
         Fetches daily historical bars for a given stock symbol.
         """
-        print(f"Fetching historical data for {symbol}...")
+        logger.info(f"Fetching historical data for {symbol} from {start_date.date()} to {end_date.date()}...")
 
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
@@ -37,6 +41,7 @@ class AlpacaDataClient:
         )
 
         bars = self.client.get_stock_bars(request_params)
+        logger.info(f"Successfully fetched {len(bars.df) if not bars.df.empty else 0} bars for {symbol}")
 
         # Return the data as a pandas DataFrame for easy viewing/manipulation
         return bars.df

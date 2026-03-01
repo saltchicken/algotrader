@@ -1,7 +1,7 @@
-import logging
 from datetime import datetime, timedelta
+from algotrader.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def setup_parser(subparsers):

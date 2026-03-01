@@ -1,16 +1,14 @@
 import argparse
 import logging
 
+from algotrader.logger import setup_logging, get_logger
+
 from algotrader.train import setup_parser as setup_train_parser
 from algotrader.trade import setup_parser as setup_trade_parser
 from algotrader.debug import setup_parser as setup_debug_parser
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+setup_logging()
+logger = get_logger(__name__)
 
 
 def main():

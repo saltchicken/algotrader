@@ -1,8 +1,7 @@
-import logging
-
-logger = logging.getLogger(__name__)
-
+from algotrader.logger import get_logger
 from algotrader.external_api.ibkr_api import IBKRTradeClient
+
+logger = get_logger(__name__)
 
 
 def setup_parser(subparsers):
@@ -33,8 +32,8 @@ def handle_trade(args):
     ibkr = IBKRTradeClient()
     try:
         trade = ibkr.place_market_order(args.symbol, "BUY", args.quantity)
-        print("\n--- Trade Details ---")
-        print(trade)
+        logger.info("--- Trade Details ---")
+        logger.info(f"\n{trade}")
 
     finally:
         ibkr.disconnect()

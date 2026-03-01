@@ -1,4 +1,7 @@
 from ib_async import IB, Stock, MarketOrder
+from algotrader.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class IBKRTradeClient:
@@ -8,14 +11,13 @@ class IBKRTradeClient:
     """
 
     def __init__(self, host="127.0.0.1", port=7497, client_id=1):
-
         self.ib = IB()
 
         # Connect to Trader Workstation (TWS) or IB Gateway
         # Port 7497 is the default for Paper Trading. Use 7496 for Live.
-        print(f"Attempting to connect to IBKR on {host}:{port}...")
+        logger.info(f"Attempting to connect to IBKR on {host}:{port}...")
         self.ib.connect(host, port, clientId=client_id)
-        print("IBKR Connected and ready to trade!")
+        logger.info("IBKR Connected and ready to trade!")
 
         # or manual nextValidId polling. ib_async handles this internally.
 
@@ -23,12 +25,10 @@ class IBKRTradeClient:
         """
         Executes a market order for a given stock symbol.
         """
-
         contract = Stock(symbol.upper(), "SMART", "USD")
-
         order = MarketOrder(action.upper(), quantity)
 
-        print(f"Placing {action} market order for {quantity} shares of {symbol}")
+        logger.info(f"Placing {action} market order for {quantity} shares of {symbol}")
 
         trade = self.ib.placeOrder(contract, order)
 
@@ -39,4 +39,5 @@ class IBKRTradeClient:
 
     def disconnect(self):
         """Gracefully close the API connection."""
+        logger.info("Disconnecting from IBKR...")
         self.ib.disconnect()

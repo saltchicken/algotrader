@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from algotrader.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def add_technical_indicators(
@@ -12,6 +15,8 @@ def add_technical_indicators(
     Takes a dataframe with a 'close' column and calculates technical indicators.
     Returns a new dataframe with the added feature columns.
     """
+    logger.debug("Calculating technical indicators...")
+    
     # Create a copy to avoid SettingWithCopyWarning
     data = df.copy()
 
@@ -70,7 +75,7 @@ def add_technical_indicators(
                 col_name = f"{col}_lag_{lag}"
                 new_lag_features[col_name] = data[col].shift(lag)
         else:
-            print(f"Warning: Column '{col}' not found. Skipping lags for this feature.")
+            logger.warning(f"Column '{col}' not found. Skipping lags for this feature.")
 
     data = data.assign(**new_lag_features)
 
@@ -80,4 +85,5 @@ def add_technical_indicators(
     data["target_next_day_return"] = data["returns"].shift(-1)
     data["target_direction"] = np.where(data["target_next_day_return"] > 0, 1, -1)
 
+    logger.debug("Successfully added technical indicators.")
     return data
