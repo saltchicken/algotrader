@@ -31,7 +31,9 @@ class AlpacaDataClient:
         """
         Fetches daily historical bars for a given stock symbol.
         """
-        logger.info(f"Fetching historical data for {symbol} from {start_date.date()} to {end_date.date()}...")
+        logger.info(
+            f"Fetching historical data for {symbol} from {start_date.date()} to {end_date.date()}..."
+        )
 
         request_params = StockBarsRequest(
             symbol_or_symbols=symbol,
@@ -41,7 +43,9 @@ class AlpacaDataClient:
         )
 
         bars = self.client.get_stock_bars(request_params)
-        logger.info(f"Successfully fetched {len(bars.df) if not bars.df.empty else 0} bars for {symbol}")
+        logger.info(
+            f"Successfully fetched {len(bars.df) if not bars.df.empty else 0} bars for {symbol}"
+        )
 
         # Return the data as a pandas DataFrame for easy viewing/manipulation
         return bars.df

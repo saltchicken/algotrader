@@ -27,7 +27,7 @@ def handle_debug(args):
 
     # Use logger instead of print
     logger.info(f"\n{df_featured.tail(10)}")
-    
+
     output_file = f"{target_symbol}_features.csv"
     df_featured.tail(50).to_csv(output_file)
     logger.info(f"Saved recent 50 features to {output_file}")
