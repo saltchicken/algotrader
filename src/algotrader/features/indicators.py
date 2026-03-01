@@ -33,34 +33,37 @@ def add_technical_indicators(
 
     neutral_threshold = 0.1
     macd_diff = data["macd"] - data["macd_signal"]
-    data["macd_trading_signal"] = np.where(macd_diff > neutral_threshold, 1, 
-                                      np.where(macd_diff < -neutral_threshold, -1, 0))
+    data["macd_trading_signal"] = np.where(
+        macd_diff > neutral_threshold,
+        1,
+        np.where(macd_diff < -neutral_threshold, -1, 0),
+    )
 
     # Bollinger Bands
-    data['bb_middle'] = data['close'].rolling(window=20).mean()
-    bb_std = data['close'].rolling(window=20).std()
-    data['bb_upper'] = data['bb_middle'] + (bb_std * 2)
-    data['bb_lower'] = data['bb_middle'] - (bb_std * 2)
+    data["bb_middle"] = data["close"].rolling(window=20).mean()
+    bb_std = data["close"].rolling(window=20).std()
+    data["bb_upper"] = data["bb_middle"] + (bb_std * 2)
+    data["bb_lower"] = data["bb_middle"] - (bb_std * 2)
     # Feature: Distance from closing price to the lower band (useful for mean-reversion)
-    data['bb_lower_dist'] = (data['close'] - data['bb_lower']) / data['close']
+    data["bb_lower_dist"] = (data["close"] - data["bb_lower"]) / data["close"]
 
     # RSI 14-day
-    delta = data['close'].diff()
+    delta = data["close"].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
-    data['rsi_14'] = 100 - (100 / (1 + rs))
+    data["rsi_14"] = 100 - (100 / (1 + rs))
 
     ###
     # --- Programmatic Machine Learning Features ---
     ###
-    
+
     # Set defaults if none provided
-    lag_columns = ['returns']
+    lag_columns = ["returns"]
     lags = [1, 2, 5]
 
     new_lag_features = {}
-    
+
     for col in lag_columns:
         if col in data.columns:
             for lag in lags:
@@ -74,7 +77,7 @@ def add_technical_indicators(
     ###
     # Target Variables
     ###
-    data['target_next_day_return'] = data['returns'].shift(-1)
-    data['target_direction'] = np.where(data['target_next_day_return'] > 0, 1, -1)
+    data["target_next_day_return"] = data["returns"].shift(-1)
+    data["target_direction"] = np.where(data["target_next_day_return"] > 0, 1, -1)
 
     return data
