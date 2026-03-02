@@ -128,9 +128,7 @@ def handle_research(args):
             logger.warning("No historical news found via Polygon.")
 
         # 2d. Fetch Dividends
-        logger.info(
-            f"\n--- Test 4: Fetching Dividends for {args.symbol} (Polygon) ---"
-        )
+        logger.info(f"\n--- Test 4: Fetching Dividends for {args.symbol} (Polygon) ---")
         dividends = poly_client.get_historical_dividends(args.symbol)
         if dividends:
             logger.info("=== Recent Dividend Payments ===")
@@ -144,9 +142,6 @@ def handle_research(args):
                 )
         else:
             logger.warning("No dividend data found via Polygon.")
-
-
-
 
     except ValueError as e:
         logger.warning(f"Skipping Polygon tests: {e}")
