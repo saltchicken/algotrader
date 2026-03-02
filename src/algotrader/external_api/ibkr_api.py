@@ -1,8 +1,10 @@
 import os
+import logging
 from dotenv import load_dotenv
 from ib_async import IB, Stock, MarketOrder, LimitOrder, StopOrder
 from algotrader.logger import get_logger
 
+logging.getLogger("ib_async").setLevel(logging.WARNING)
 logger = get_logger(__name__)
 
 
