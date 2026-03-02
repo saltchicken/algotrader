@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 from ib_async import IB, Stock, MarketOrder, LimitOrder, StopOrder
 from algotrader.logger import get_logger
@@ -16,6 +17,36 @@ class IBKRTradeClient:
         logger.info(f"Attempting to connect to IBKR on {host}:{port}...")
         self.ib.connect(host, port, clientId=client_id)
         logger.info("IBKR Connected and ready to trade!")
+
+    def get_cash_balance(self) -> float:
+        """
+        Retrieves the available funds (cash) for trading.
+        """
+        logger.info("Fetching account summary to determine cash balance...")
+
+        # accountSummary() fetches account details across all accounts
+        summary = self.ib.accountSummary()
+
+        available_funds = None
+        total_cash = None
+
+        for item in summary:
+            # 'AvailableFunds' is generally the most accurate representation of buying power
+            if item.tag == "AvailableFunds" and item.currency == "USD":
+                available_funds = float(item.value)
+            # 'TotalCashValue' represents settled cash
+            elif item.tag == "TotalCashValue" and item.currency == "USD":
+                total_cash = float(item.value)
+
+        if available_funds is not None:
+            logger.info(f"Current USD Available Funds: ${available_funds:,.2f}")
+            return available_funds
+        elif total_cash is not None:
+            logger.info(f"Current USD Total Cash Value: ${total_cash:,.2f}")
+            return total_cash
+        else:
+            logger.warning("Could not find USD cash balance in account summary.")
+            return 0.0
 
     def place_market_order(self, symbol: str, action: str, quantity: float):
         contract = Stock(symbol.upper(), "SMART", "USD")
