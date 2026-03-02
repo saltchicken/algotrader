@@ -30,12 +30,12 @@ class PolygonClient:
         Polygon's free tier limits users to 5 requests per minute.
         """
         base_wait = 10  # Start with a 10s wait, then 20s, 40s...
-        
+
         for attempt in range(max_retries):
             response = requests.get(url)
-            
+
             if response.status_code == 429:
-                wait_time = base_wait * (2 ** attempt)
+                wait_time = base_wait * (2**attempt)
                 logger.warning(
                     f"Polygon rate limit hit. Retrying in {wait_time}s "
                     f"(Attempt {attempt + 1}/{max_retries})..."
@@ -43,7 +43,7 @@ class PolygonClient:
                 time.sleep(wait_time)
             else:
                 return response
-                
+
         # Return the last response if all retries are exhausted
         return response
 
@@ -172,5 +172,7 @@ class PolygonClient:
         if response.status_code == 200:
             return response.json().get("results", [])
 
-        logger.error(f"Failed to fetch historical dividends for {symbol}: {response.text}")
+        logger.error(
+            f"Failed to fetch historical dividends for {symbol}: {response.text}"
+        )
         return []
