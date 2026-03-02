@@ -58,14 +58,11 @@ def handle_train(args):
 
     logger.info(f"Successfully loaded {len(dataframes)} symbols into memory.")
 
-    # TODO: Apply feature engineering from algotrader.features.indicators
-    # TODO: Train scikit-learn model
 
     # Ensure the models directory exists
     os.makedirs("models", exist_ok=True)
     model_path = os.path.join("models", args.model_name)
 
-    # TODO: Save it via joblib to the models/ directory
-    # joblib.dump(model, model_path)
 
-    logger.info(f"Training complete. Model would be saved to '{model_path}'.")
+    # TODO: Implement training logic
+    # logger.info(f"Training complete. Model would be saved to '{model_path}'.")
