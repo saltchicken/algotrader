@@ -127,10 +127,31 @@ def handle_research(args):
         else:
             logger.warning("No historical news found via Polygon.")
 
+        # 2d. Fetch Dividends
+        logger.info(
+            f"\n--- Test 4: Fetching Dividends for {args.symbol} (Polygon) ---"
+        )
+        dividends = poly_client.get_historical_dividends(args.symbol)
+        if dividends:
+            logger.info("=== Recent Dividend Payments ===")
+            for div in dividends:
+                ex_date = div.get("ex_dividend_date", "")
+                record_date = div.get("record_date", "")
+                payment_date = div.get("pay_date", "")
+                amount = div.get("cash_amount", 0.0)
+                logger.info(
+                    f"Ex Date: {ex_date} | Record Date: {record_date} | Payment Date: {payment_date} | Amount: ${amount:,.2f}"
+                )
+        else:
+            logger.warning("No dividend data found via Polygon.")
+
+
+
+
     except ValueError as e:
         logger.warning(f"Skipping Polygon tests: {e}")
 
-    # # Test 4: Screener (Finviz)
+    # # Test 5: Screener (Finviz)
     # logger.info("\n--- Test 4: Running Screener (Finviz) ---")
     # # Test filters: Mid/Large Cap, P/E < 20, Debt/Eq < 1
     # test_filters = ['cap_midover', 'fa_pe_u20', 'fa_debteq_u1']
