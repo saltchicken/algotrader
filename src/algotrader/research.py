@@ -1,6 +1,6 @@
 from algotrader.logger import setup_logging, get_logger
-
 from algotrader.external_api.finviz_api import FinvizClient
+from algotrader.external_api.polygon_api import PolygonClient
 
 setup_logging()
 logger = get_logger(__name__)
@@ -8,42 +8,60 @@ logger = get_logger(__name__)
 
 def setup_parser(subparsers):
     """Sets up the argparse subparser for the research command."""
-    parser = subparsers.add_parser("research", help="Research using the Finviz API client")
+    parser = subparsers.add_parser(
+        "research", help="Research using Finviz and Polygon APIs"
+    )
     parser.add_argument(
-        "--symbol", type=str, default="AAPL", help="Stock symbol to fetch (default: AAPL)"
+        "--symbol",
+        type=str,
+        default="AAPL",
+        help="Stock symbol to fetch (default: AAPL)",
     )
     parser.set_defaults(func=handle_research)
 
 
 def handle_research(args):
-    """Handler for the 'test-finviz' command."""
-    logger.info("Starting Finviz API Test...")
-    client = FinvizClient()
-    
-    # Test 1: Fetch Fundamentals
-    logger.info(f"--- Test 1: Fetching Fundamentals for {args.symbol} ---")
-    fundamentals = client.get_stock_fundamentals(args.symbol)
+    """Handler for the 'research' command."""
+    logger.info("Starting Research API Tests...")
+
+    # --- Test 1: Fetch Current Fundamentals (Finviz) ---
+    logger.info(
+        f"\n--- Test 1: Fetching Current Fundamentals for {args.symbol} (Finviz) ---"
+    )
+    finviz_client = FinvizClient()
+    fundamentals = finviz_client.get_stock_fundamentals(args.symbol)
+
     if fundamentals:
         logger.info("=== Company Profile ===")
         logger.info(f"Company:  {fundamentals.get('Company')}")
-        logger.info(f"Sector:   {fundamentals.get('Sector')} | Industry: {fundamentals.get('Industry')}")
+        logger.info(
+            f"Sector:   {fundamentals.get('Sector')} | Industry: {fundamentals.get('Industry')}"
+        )
         logger.info(f"Country:  {fundamentals.get('Country')}")
 
         logger.info("=== Valuation Metrics ===")
         logger.info(f"Market Cap:  {fundamentals.get('Market Cap')}")
-        logger.info(f"P/E Ratio:   {fundamentals.get('P/E')} | Forward P/E: {fundamentals.get('Forward P/E')}")
+        logger.info(
+            f"P/E Ratio:   {fundamentals.get('P/E')} | Forward P/E: {fundamentals.get('Forward P/E')}"
+        )
         logger.info(f"PEG Ratio:   {fundamentals.get('PEG')}")
-        logger.info(f"Price/Book:  {fundamentals.get('P/B')} | Price/Sales: {fundamentals.get('P/S')}")
+        logger.info(
+            f"Price/Book:  {fundamentals.get('P/B')} | Price/Sales: {fundamentals.get('P/S')}"
+        )
 
         logger.info("=== Profitability & Growth ===")
-        logger.info(f"ROE:           {fundamentals.get('ROE')} | ROA: {fundamentals.get('ROA')}")
+        logger.info(
+            f"ROE:           {fundamentals.get('ROE')} | ROA: {fundamentals.get('ROA')}"
+        )
         logger.info(f"Profit Margin: {fundamentals.get('Profit Margin')}")
-        logger.info(f"EPS Q/Q:       {fundamentals.get('EPS Q/Q')} | Sales Q/Q: {fundamentals.get('Sales Q/Q')}")
+        logger.info(
+            f"EPS Q/Q:       {fundamentals.get('EPS Q/Q')} | Sales Q/Q: {fundamentals.get('Sales Q/Q')}"
+        )
 
         logger.info("=== Financial Health ===")
         logger.info(f"Debt/Equity:   {fundamentals.get('Debt/Eq')}")
         logger.info(f"Current Ratio: {fundamentals.get('Current Ratio')}")
-        
+
         logger.info("=== Market Sentiment & Technicals ===")
         logger.info(f"Beta:        {fundamentals.get('Beta')}")
         logger.info(f"Short Float: {fundamentals.get('Short Float')}")
@@ -51,19 +69,58 @@ def handle_research(args):
         logger.info(f"RSI (14):    {fundamentals.get('RSI (14)')}")
         logger.info(f"Rel Volume:  {fundamentals.get('Rel Volume')}")
     else:
-        logger.warning("Failed to fetch fundamentals.")
+        logger.warning("Failed to fetch Finviz fundamentals.")
 
-    # # Test 2: Screener
-    # logger.info("--- Test 2: Running Screener ---")
+    # --- Test 2: Fetch Historical Point-in-Time Data (Polygon) ---
+    logger.info(
+        f"\n--- Test 2: Fetching Historical Data for {args.symbol} (Polygon) ---"
+    )
+    try:
+        poly_client = PolygonClient()
+
+        # 2a. Fetch Ticker Details
+        details = poly_client.get_ticker_details(args.symbol)
+        if details:
+            logger.info("=== Polygon Ticker Details ===")
+            logger.info(
+                f"Name: {details.get('name')} | Market Cap: {details.get('market_cap')}"
+            )
+            logger.info(
+                f"Employees: {details.get('total_employees')} | Homepage: {details.get('homepage_url')}"
+            )
+
+        # 2b. Fetch Point-in-Time Financials
+        financials = poly_client.get_historical_financials(args.symbol, limit=1)
+        if financials:
+            latest = financials[0]
+            period = latest.get("fiscal_period")
+            year = latest.get("fiscal_year")
+            logger.info(f"=== Polygon Recent Financials ({year} {period}) ===")
+
+            # Drill down into the raw financial statement structure
+            income_stmt = latest.get("financials", {}).get("income_statement", {})
+            revenue = income_stmt.get("revenues", {}).get("value")
+            net_income = income_stmt.get("net_income_loss", {}).get("value")
+
+            if revenue:
+                logger.info(f"Quarterly Revenue:   ${revenue:,.2f}")
+            if net_income:
+                logger.info(f"Quarterly Net Income: ${net_income:,.2f}")
+        else:
+            logger.warning("No financial data found via Polygon.")
+
+    except ValueError as e:
+        logger.warning(f"Skipping Polygon tests: {e}")
+
+    # # Test 3: Screener (Finviz)
+    # logger.info("\n--- Test 3: Running Screener (Finviz) ---")
     # # Test filters: Mid/Large Cap, P/E < 20, Debt/Eq < 1
-    # test_filters = ['cap_midover', 'fa_pe_u20', 'fa_debteq_u1'] 
+    # test_filters = ['cap_midover', 'fa_pe_u20', 'fa_debteq_u1']
     # logger.info(f"Using filters: {test_filters}")
-    # tickers = client.get_screener_tickers(test_filters)
+    # tickers = finviz_client.get_screener_tickers(test_filters)
     #
     # if tickers:
     #     logger.info(f"Screener found {len(tickers)} tickers.")
     #     logger.info(f"First 10 matches: {tickers[:10]}")
     # else:
     #     logger.warning("Screener returned no results.")
-
-
