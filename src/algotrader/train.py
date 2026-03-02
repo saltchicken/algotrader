@@ -58,11 +58,9 @@ def handle_train(args):
 
     logger.info(f"Successfully loaded {len(dataframes)} symbols into memory.")
 
-
     # Ensure the models directory exists
     os.makedirs("models", exist_ok=True)
     model_path = os.path.join("models", args.model_name)
-
 
     # TODO: Implement training logic
     # logger.info(f"Training complete. Model would be saved to '{model_path}'.")
