@@ -92,7 +92,7 @@ def handle_research(args):
         # 2b. Fetch Point-in-Time Financials (Past 2 Years / 8 Quarters)
         financials = poly_client.get_historical_financials(args.symbol, limit=8)
         if financials:
-            logger.info("=== Polygon Quarterly Financials ===")
+            logger.info("=== Polygon Quarterly Financials (Past 2 Years) ===")
             for report in financials:
                 period = report.get("fiscal_period")
                 year = report.get("fiscal_year")
@@ -111,11 +111,27 @@ def handle_research(args):
         else:
             logger.warning("No financial data found via Polygon.")
 
+        # 2c. Fetch Historical News
+        logger.info(
+            f"\n--- Test 3: Fetching Historical News for {args.symbol} (Polygon) ---"
+        )
+        news = poly_client.get_historical_news(args.symbol, limit=50)
+        if news:
+            logger.info("=== Recent News Headlines ===")
+            for article in news:
+                # Extract just the YYYY-MM-DD from the timestamp
+                pub_date = article.get("published_utc", "")[:10]
+                title = article.get("title", "No Title")
+                publisher = article.get("publisher", {}).get("name", "Unknown")
+                logger.info(f"[{pub_date}] {publisher}: {title}")
+        else:
+            logger.warning("No historical news found via Polygon.")
+
     except ValueError as e:
         logger.warning(f"Skipping Polygon tests: {e}")
 
-    # # Test 3: Screener (Finviz)
-    # logger.info("\n--- Test 3: Running Screener (Finviz) ---")
+    # # Test 4: Screener (Finviz)
+    # logger.info("\n--- Test 4: Running Screener (Finviz) ---")
     # # Test filters: Mid/Large Cap, P/E < 20, Debt/Eq < 1
     # test_filters = ['cap_midover', 'fa_pe_u20', 'fa_debteq_u1']
     # logger.info(f"Using filters: {test_filters}")
