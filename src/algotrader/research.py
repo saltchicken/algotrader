@@ -90,7 +90,7 @@ def handle_research(args):
             )
 
         # 2b. Fetch Point-in-Time Financials (Past 2 Years / 8 Quarters)
-        financials = poly_client.get_historical_financials(args.symbol, limit=30)
+        financials = poly_client.get_historical_financials(args.symbol, limit=8)
         if financials:
             logger.info("=== Polygon Quarterly Financials ===")
             for report in financials:
