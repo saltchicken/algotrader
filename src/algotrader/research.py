@@ -24,9 +24,32 @@ def handle_research(args):
     logger.info(f"--- Test 1: Fetching Fundamentals for {args.symbol} ---")
     fundamentals = client.get_stock_fundamentals(args.symbol)
     if fundamentals:
-        logger.info(f"P/E Ratio: {fundamentals.get('P/E')}")
-        logger.info(f"Market Cap: {fundamentals.get('Market Cap')}")
-        logger.info(f"ROE: {fundamentals.get('ROE')}")
+        logger.info("=== Company Profile ===")
+        logger.info(f"Company:  {fundamentals.get('Company')}")
+        logger.info(f"Sector:   {fundamentals.get('Sector')} | Industry: {fundamentals.get('Industry')}")
+        logger.info(f"Country:  {fundamentals.get('Country')}")
+
+        logger.info("=== Valuation Metrics ===")
+        logger.info(f"Market Cap:  {fundamentals.get('Market Cap')}")
+        logger.info(f"P/E Ratio:   {fundamentals.get('P/E')} | Forward P/E: {fundamentals.get('Forward P/E')}")
+        logger.info(f"PEG Ratio:   {fundamentals.get('PEG')}")
+        logger.info(f"Price/Book:  {fundamentals.get('P/B')} | Price/Sales: {fundamentals.get('P/S')}")
+
+        logger.info("=== Profitability & Growth ===")
+        logger.info(f"ROE:           {fundamentals.get('ROE')} | ROA: {fundamentals.get('ROA')}")
+        logger.info(f"Profit Margin: {fundamentals.get('Profit Margin')}")
+        logger.info(f"EPS Q/Q:       {fundamentals.get('EPS Q/Q')} | Sales Q/Q: {fundamentals.get('Sales Q/Q')}")
+
+        logger.info("=== Financial Health ===")
+        logger.info(f"Debt/Equity:   {fundamentals.get('Debt/Eq')}")
+        logger.info(f"Current Ratio: {fundamentals.get('Current Ratio')}")
+        
+        logger.info("=== Market Sentiment & Technicals ===")
+        logger.info(f"Beta:        {fundamentals.get('Beta')}")
+        logger.info(f"Short Float: {fundamentals.get('Short Float')}")
+        logger.info(f"Volatility:  {fundamentals.get('Volatility')}")
+        logger.info(f"RSI (14):    {fundamentals.get('RSI (14)')}")
+        logger.info(f"Rel Volume:  {fundamentals.get('Rel Volume')}")
     else:
         logger.warning("Failed to fetch fundamentals.")
 
