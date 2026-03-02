@@ -46,7 +46,7 @@ class PolygonClient:
             symbol (str): The stock ticker (e.g., 'AAPL')
             limit (int): Number of historical financial reports to return.
         """
-        url = f"{self.base_url}/vX/reference/financials?ticker={symbol.upper()}&limit={limit}&apiKey={self.api_key}"
+        url = f"{self.base_url}/vX/reference/financials?ticker={symbol.upper()}&timeframe=quarterly&limit={limit}&apiKey={self.api_key}"
         response = requests.get(url)
 
         if response.status_code == 200:
