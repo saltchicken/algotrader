@@ -24,18 +24,17 @@ class PolygonClient:
 
         self.base_url = "https://api.polygon.io"
 
-    def _make_request(self, url: str, max_retries: int = 4) -> requests.Response:
+    def _make_request(self, url: str, max_retries: int = 2) -> requests.Response:
         """
         Internal helper to make requests with automatic retry on 429 (Rate Limit).
         Polygon's free tier limits users to 5 requests per minute.
         """
-        base_wait = 10  # Start with a 10s wait, then 20s, 40s...
+        wait_time = 60
 
         for attempt in range(max_retries):
             response = requests.get(url)
 
             if response.status_code == 429:
-                wait_time = base_wait * (2**attempt)
                 logger.warning(
                     f"Polygon rate limit hit. Retrying in {wait_time}s "
                     f"(Attempt {attempt + 1}/{max_retries})..."
