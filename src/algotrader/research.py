@@ -89,23 +89,25 @@ def handle_research(args):
                 f"Employees: {details.get('total_employees')} | Homepage: {details.get('homepage_url')}"
             )
 
-        # 2b. Fetch Point-in-Time Financials
-        financials = poly_client.get_historical_financials(args.symbol, limit=1)
+        # 2b. Fetch Point-in-Time Financials (Past 2 Years / 8 Quarters)
+        financials = poly_client.get_historical_financials(args.symbol, limit=30)
         if financials:
-            latest = financials[0]
-            period = latest.get("fiscal_period")
-            year = latest.get("fiscal_year")
-            logger.info(f"=== Polygon Recent Financials ({year} {period}) ===")
+            logger.info("=== Polygon Quarterly Financials ===")
+            for report in financials:
+                period = report.get("fiscal_period")
+                year = report.get("fiscal_year")
 
-            # Drill down into the raw financial statement structure
-            income_stmt = latest.get("financials", {}).get("income_statement", {})
-            revenue = income_stmt.get("revenues", {}).get("value")
-            net_income = income_stmt.get("net_income_loss", {}).get("value")
+                # Drill down into the raw financial statement structure
+                income_stmt = report.get("financials", {}).get("income_statement", {})
+                revenue = income_stmt.get("revenues", {}).get("value")
+                net_income = income_stmt.get("net_income_loss", {}).get("value")
 
-            if revenue:
-                logger.info(f"Quarterly Revenue:   ${revenue:,.2f}")
-            if net_income:
-                logger.info(f"Quarterly Net Income: ${net_income:,.2f}")
+                rev_str = f"${revenue:,.2f}" if revenue else "N/A"
+                ni_str = f"${net_income:,.2f}" if net_income else "N/A"
+
+                logger.info(
+                    f"{year} {period} | Rev: {rev_str:>16} | Net Income: {ni_str:>16}"
+                )
         else:
             logger.warning("No financial data found via Polygon.")
 
