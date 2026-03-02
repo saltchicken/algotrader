@@ -1,5 +1,6 @@
 import os
 import copy
+import time
 import requests
 from dotenv import load_dotenv
 from algotrader.logger import get_logger
@@ -23,12 +24,35 @@ class PolygonClient:
 
         self.base_url = "https://api.polygon.io"
 
+    def _make_request(self, url: str, max_retries: int = 4) -> requests.Response:
+        """
+        Internal helper to make requests with automatic retry on 429 (Rate Limit).
+        Polygon's free tier limits users to 5 requests per minute.
+        """
+        base_wait = 10  # Start with a 10s wait, then 20s, 40s...
+        
+        for attempt in range(max_retries):
+            response = requests.get(url)
+            
+            if response.status_code == 429:
+                wait_time = base_wait * (2 ** attempt)
+                logger.warning(
+                    f"Polygon rate limit hit. Retrying in {wait_time}s "
+                    f"(Attempt {attempt + 1}/{max_retries})..."
+                )
+                time.sleep(wait_time)
+            else:
+                return response
+                
+        # Return the last response if all retries are exhausted
+        return response
+
     def get_ticker_details(self, symbol: str) -> dict:
         """
         Fetches general company details from Polygon (market cap, employees, etc).
         """
         url = f"{self.base_url}/v3/reference/tickers/{symbol.upper()}?apiKey={self.api_key}"
-        response = requests.get(url)
+        response = self._make_request(url)
 
         if response.status_code == 200:
             return response.json().get("results", {})
@@ -46,7 +70,7 @@ class PolygonClient:
         """
         # Fetch extra records internally (limit * 2) so we have historical buffer data to fill gaps
         url = f"{self.base_url}/vX/reference/financials?ticker={symbol.upper()}&timeframe=quarterly&limit={limit * 2}&apiKey={self.api_key}"
-        response = requests.get(url)
+        response = self._make_request(url)
 
         if response.status_code != 200:
             logger.error(
@@ -129,10 +153,24 @@ class PolygonClient:
         Useful for sentiment analysis and NLP-based machine learning models.
         """
         url = f"{self.base_url}/v2/reference/news?ticker={symbol.upper()}&limit={limit}&apiKey={self.api_key}"
-        response = requests.get(url)
+        response = self._make_request(url)
 
         if response.status_code == 200:
             return response.json().get("results", [])
 
         logger.error(f"Failed to fetch historical news for {symbol}: {response.text}")
+        return []
+
+    def get_historical_dividends(self, symbol: str, limit: int = 100) -> list:
+        """
+        Fetches historical cash dividend distributions for a given ticker.
+        Returns a list containing dividend values, ex-dividend dates, and payment dates.
+        """
+        url = f"{self.base_url}/v3/reference/dividends?ticker={symbol.upper()}&limit={limit}&apiKey={self.api_key}"
+        response = self._make_request(url)
+
+        if response.status_code == 200:
+            return response.json().get("results", [])
+
+        logger.error(f"Failed to fetch historical dividends for {symbol}: {response.text}")
         return []
