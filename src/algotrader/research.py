@@ -96,6 +96,7 @@ def handle_research(args):
             for report in financials:
                 period = report.get("fiscal_period")
                 year = report.get("fiscal_year")
+                filing_date = report.get("filing_date")
 
                 # Drill down into the raw financial statement structure
                 income_stmt = report.get("financials", {}).get("income_statement", {})
@@ -106,7 +107,7 @@ def handle_research(args):
                 ni_str = f"${net_income:,.2f}" if net_income else "N/A"
 
                 logger.info(
-                    f"{year} {period} | Rev: {rev_str:>16} | Net Income: {ni_str:>16}"
+                    f"{year} {period} | Rev: {rev_str:>16} | Net Income: {ni_str:>16} | Filing Date: {filing_date}"
                 )
         else:
             logger.warning("No financial data found via Polygon.")
