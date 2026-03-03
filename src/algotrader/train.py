@@ -24,6 +24,12 @@ def setup_parser(subparsers):
         default="model.pkl",
         help="Name of the model file to save after training",
     )
+    parser.add_argument(
+        "--horizon",
+        type=int,
+        default=63,
+        help="Lookahead horizon in trading days for target creation (e.g., 21 for 1 month, 63 for 3 months)",
+    )
 
     parser.set_defaults(func=handle_train)
 
@@ -49,6 +55,8 @@ def handle_train(args):
 
     logger.info(f"Found {len(csv_files)} historical data files. Loading dataset...")
 
+    horizon = args.horizon
+
     # Load local data
     dataframes = {}
     for file_name in csv_files:
@@ -56,11 +64,11 @@ def handle_train(args):
         file_path = os.path.join(args.dataset_dir, file_name)
         df = pd.read_csv(file_path, index_col=0, parse_dates=True)
 
-        # Build Targets (21 trading days = ~1 month)
-        df = build_targets(df, horizons=[21], thresholds=[0.05, 0.10, 0.20])
+        # Build Targets based on the dynamically provided horizon
+        df = build_targets(df, horizons=[horizon], thresholds=[0.05, 0.10, 0.20])
 
-        # Drop the last 21 rows because we don't know their future outcomes yet
-        df.dropna(subset=["return_future_21d"], inplace=True)
+        # Drop the last 'horizon' rows because we don't know their future outcomes yet
+        df.dropna(subset=[f"return_future_{horizon}d"], inplace=True)
 
         dataframes[symbol] = df
 
@@ -70,11 +78,11 @@ def handle_train(args):
 
     # Show a quick summary of the target distributions to ensure it worked
     all_data = pd.concat(dataframes.values())
-    logger.info("=== 1-Month Target Distributions ===")
+    logger.info(f"=== {horizon}-Day Target Distributions ===")
     logger.info(f"Total historical samples: {len(all_data):,}")
-    logger.info(f"Hit Target 5%:  {all_data['target_21d_5pct'].mean():.2%}")
-    logger.info(f"Hit Target 10%: {all_data['target_21d_10pct'].mean():.2%}")
-    logger.info(f"Hit Target 20%: {all_data['target_21d_20pct'].mean():.2%}")
+    logger.info(f"Hit Target 5%:  {all_data[f'target_{horizon}d_5pct'].mean():.2%}")
+    logger.info(f"Hit Target 10%: {all_data[f'target_{horizon}d_10pct'].mean():.2%}")
+    logger.info(f"Hit Target 20%: {all_data[f'target_{horizon}d_20pct'].mean():.2%}")
 
     # Ensure the models directory exists
     os.makedirs("models", exist_ok=True)
