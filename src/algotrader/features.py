@@ -1,8 +1,127 @@
+import os
+import json
 import pandas as pd
 import numpy as np
 from algotrader.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def _estimate_filing_date(report: dict) -> pd.Timestamp:
+    """
+    Estimates a missing SEC filing date based on standard SEC deadlines:
+    ~45 days after quarter end for Q1-Q3.
+    ~90 days after year end for Q4.
+    """
+    filing_date = report.get("filing_date")
+    if filing_date:
+        return pd.to_datetime(filing_date)
+
+    end_date = report.get("end_date")
+    period = report.get("fiscal_period", "")
+    year = report.get("fiscal_year")
+
+    # Standard SEC filing deadlines
+    days_to_file = 90 if period == "Q4" else 45
+
+    if end_date:
+        return pd.to_datetime(end_date) + pd.Timedelta(days=days_to_file)
+
+    if year and period:
+        # Fallback if both filing_date and end_date are completely missing
+        month_map = {"Q1": 3, "Q2": 6, "Q3": 9, "Q4": 12}
+        month = month_map.get(period, 3)
+        # Create a timestamp for the 1st of the month, then jump to the end of the month
+        estimated_end = pd.Timestamp(
+            year=int(year), month=month, day=1
+        ) + pd.offsets.MonthEnd(1)
+        return estimated_end + pd.Timedelta(days=days_to_file)
+
+    return pd.NaT
+
+
+def merge_financials(
+    alpaca_df: pd.DataFrame, symbol: str, polygon_dir: str
+) -> pd.DataFrame:
+    """
+    Loads Polygon quarterly financials and merges them with Alpaca daily pricing data.
+    Uses merge_asof on the filing_date to prevent look-ahead bias.
+    """
+    fin_path = os.path.join(polygon_dir, symbol, "financials.json")
+
+    # If no financials exist, return the original dataframe
+    if not os.path.exists(fin_path):
+        logger.warning(
+            f"No financials.json found for {symbol}. Skipping financial merge."
+        )
+        return alpaca_df
+
+    with open(fin_path, "r") as f:
+        raw_data = json.load(f)
+
+    if not raw_data:
+        return alpaca_df
+
+    # 1. Flatten the nested JSON structure into a tabular list
+    records = []
+    for report in raw_data:
+        est_filing_date = _estimate_filing_date(report)
+        if pd.isna(est_filing_date):
+            continue  # Skip if we completely fail to deduce a timeframe
+
+        record = {
+            "filing_date": est_filing_date,
+            "fiscal_period": report.get("fiscal_period"),
+            "fiscal_year": report.get("fiscal_year"),
+        }
+
+        # Safely extract financials block
+        fin = report.get("financials", {})
+
+        # Income Statement
+        inc = fin.get("income_statement", {})
+        record["revenue"] = inc.get("revenues", {}).get("value", np.nan)
+        record["net_income"] = inc.get("net_income_loss", {}).get("value", np.nan)
+        record["operating_expenses"] = inc.get("operating_expenses", {}).get(
+            "value", np.nan
+        )
+
+        # Balance Sheet
+        bs = fin.get("balance_sheet", {})
+        record["assets"] = bs.get("assets", {}).get("value", np.nan)
+        record["liabilities"] = bs.get("liabilities", {}).get("value", np.nan)
+        record["equity"] = bs.get("equity", {}).get("value", np.nan)
+
+        # Cash Flow
+        cf = fin.get("cash_flow_statement", {})
+        record["net_cash_flow"] = cf.get("net_cash_flow", {}).get("value", np.nan)
+
+        records.append(record)
+
+    fin_df = pd.DataFrame(records)
+
+    # 2. Sort financial data by filing date (required for merge_asof)
+    fin_df = fin_df.sort_values("filing_date").dropna(subset=["filing_date"])
+
+    # 3. Prepare Alpaca dataframe
+    # Ensure index is a proper datetime index and strictly sorted
+    alpaca_df = alpaca_df.copy()
+    if not isinstance(alpaca_df.index, pd.DatetimeIndex):
+        alpaca_df.index = pd.to_datetime(alpaca_df.index)
+    alpaca_df = alpaca_df.sort_index()
+
+    # 4. Point-in-time merge
+    # This matches the Alpaca row's index (timestamp) with the most recent filing_date
+    # strictly BEFORE or ON the trading day. This prevents lookahead bias and inherently
+    # forward-fills missing quarters.
+    merged_df = pd.merge_asof(
+        alpaca_df, fin_df, left_index=True, right_on="filing_date", direction="backward"
+    )
+
+    # Clean up the output index
+    merged_df.index = alpaca_df.index
+
+    return merged_df
 
 
 def build_bracket_targets(
@@ -20,15 +139,6 @@ def build_bracket_targets(
       1: Take Profit hit first
      -1: Stop Loss hit first
       0: Neither hit (expired at horizon)
-
-    Args:
-        df: DataFrame containing Alpaca market data ('close', 'high', 'low').
-        horizon: Number of trading days to hold the position.
-        take_profit: Take profit percentage (e.g., 0.10 for +10%).
-        stop_loss: Stop loss percentage (e.g., -0.05 for -5%).
-
-    Returns:
-        DataFrame with new bracket target columns appended.
     """
     df = df.copy()
 
@@ -50,7 +160,7 @@ def build_bracket_targets(
 
     for i in range(n - horizon):
         entry_price = closes[i]
-        
+
         # Skip invalid prices
         if pd.isna(entry_price) or entry_price <= 0:
             continue
@@ -76,14 +186,14 @@ def build_bracket_targets(
             outcomes[i] = 0
             returns[i] = (exit_price - entry_price) / entry_price
             durations[i] = horizon
-            
+
         elif sl_idx <= tp_idx:
             # Stop loss hit first, or both hit on the very same day.
             # We conservatively assume the SL triggered first on a volatile day.
             outcomes[i] = -1
             returns[i] = stop_loss
             durations[i] = sl_idx + 1
-            
+
         else:
             # Take profit hit first!
             outcomes[i] = 1
