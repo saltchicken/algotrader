@@ -1,0 +1,116 @@
+data/
+└── raw/
+    ├── alpaca/
+    │   ├── AAPL.csv
+    │   └── MSFT.csv
+    └── polygon/
+        ├── AAPL/
+        │   ├── details.json
+        │   ├── dividends.json
+        │   ├── financials.json
+        │   └── news.json
+        └── MSFT/
+            ├── details.json
+            ├── dividends.json
+            ├── financials.json
+            └── news.json
+
+=========================================
+DATA SCHEMAS
+
+1. Alpaca Market Data (alpaca/*.csv)
+
+Daily historical price bars retrieved via Alpaca's StockBarsRequest. Saved directly from a pandas DataFrame.
+Primary Columns/Fields:
+
+timestamp: The date/time of the bar (typically part of a MultiIndex)
+
+symbol: The ticker symbol (typically part of a MultiIndex)
+
+open: Opening price
+
+high: High price
+
+low: Low price
+
+close: Closing price
+
+volume: Total trading volume in shares
+
+trade_count: Number of individual trades during the period
+
+vwap: Volume-weighted average price
+
+2. Polygon Data (polygon//.json)
+
+A. details.json
+
+General company information and metadata. Stored as a single JSON object.
+Key Fields:
+
+ticker: Stock symbol (e.g., "AAPL")
+
+name: Full company name
+
+market_cap: Market capitalization
+
+total_employees: Number of employees
+
+homepage_url: Company website URL
+
+description: Text overview of the company's business
+
+sic_code: Standard Industrial Classification code
+
+address: JSON object with physical headquarters location
+
+B. financials.json
+
+Historical quarterly financials (point-in-time). Stored as a list/array of JSON objects. Missing quarters are forward-filled by the ingestion script.
+Key Fields:
+
+fiscal_period: Quarter identifier (e.g., "Q1", "Q2")
+
+fiscal_year: Year of the filing
+
+filing_date: Date the financial report was officially filed (YYYY-MM-DD)
+
+financials: Nested JSON object containing the core statements:
+
+income_statement: Contains objects like revenues.value, net_income_loss.value, operating_expenses.value, etc.
+
+balance_sheet: Contains objects like assets.value, liabilities.value, equity.value
+
+cash_flow_statement: Contains objects like net_cash_flow.value
+
+C. news.json
+
+Historical news articles. Stored as a list/array of JSON objects.
+Key Fields:
+
+published_utc: Timestamp of publication (e.g., "2023-10-15T14:30:00Z")
+
+title: Article headline
+
+publisher: JSON object containing the publisher's name and homepage_url
+
+article_url: URL link to the full article
+
+author: Article author (if available)
+
+description: Brief summary or snippet of the article
+
+D. dividends.json
+
+Historical cash dividend distributions. Stored as a list/array of JSON objects.
+Key Fields:
+
+ex_dividend_date: Date the stock starts trading without the dividend (YYYY-MM-DD)
+
+record_date: Date required to be registered as a shareholder to receive the dividend
+
+pay_date: Date the dividend cash is actually distributed
+
+cash_amount: Dollar amount distributed per share
+
+dividend_type: Code indicating the type of dividend (e.g., "CD" for standard Cash Dividend)
