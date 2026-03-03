@@ -48,6 +48,12 @@ def setup_parser(subparsers):
         default=-0.05,
         help="Stop loss percentage for the simulated bracket order (e.g., -0.05 for -5%)",
     )
+    parser.add_argument(
+        "--min-net-income-growth",
+        type=float,
+        default=None,
+        help="Only simulate trades when net_income_pct_change is over this percentage (e.g., 0.05 for 5%)"
+    )
 
     parser.set_defaults(func=handle_train)
 
@@ -60,6 +66,9 @@ def handle_train(args):
     logger.info(
         f"Bracket Order Settings -> Horizon: {args.horizon} days | TP: {args.take_profit:.1%} | SL: {args.stop_loss:.1%}"
     )
+    
+    if args.min_net_income_growth is not None:
+        logger.info(f"Trade Filter -> Net Income Pct Change > {args.min_net_income_growth:.1%}")
 
     if not os.path.exists(args.dataset_dir):
         logger.error(
@@ -119,6 +128,15 @@ def handle_train(args):
         # Drop the last 'horizon' rows because we don't know their future outcomes yet
         df.dropna(subset=[f"bracket_outcome_{horizon}d"], inplace=True)
         
+        # 3. Apply the Fundamental Filter
+        # Excludes any days/simulated trades where the required net income growth wasn't met
+        if args.min_net_income_growth is not None:
+            if "net_income_pct_change" in df.columns:
+                df = df[df["net_income_pct_change"] > args.min_net_income_growth]
+            else:
+                # If no financials could be loaded for this stock, it fails the strict filter
+                df = df.iloc[0:0]
+
         if not df.empty:
             dataframes[symbol] = df
             
@@ -127,7 +145,7 @@ def handle_train(args):
             df.to_csv(processed_file_path)
 
     if not dataframes:
-        logger.error("No valid dataset remaining after bracket generation and dropping NaNs.")
+        logger.error("No valid dataset remaining after bracket generation and fundamental filtering.")
         return
 
     logger.info(
@@ -146,7 +164,7 @@ def handle_train(args):
     avg_duration = all_data[f"bracket_duration_{horizon}d"].mean()
 
     logger.info(f"=== {horizon}-Day Bracket Order Outcomes ===")
-    logger.info(f"Total historical samples:  {total_samples:,}")
+    logger.info(f"Total historical samples (trades taken):  {total_samples:,}")
     logger.info(f"Hit Take Profit (+{take_profit:.1%}): {tp_hits/total_samples:.2%} ({tp_hits:,} samples)")
     logger.info(f"Hit Stop Loss   ({stop_loss:.1%}): {sl_hits/total_samples:.2%} ({sl_hits:,} samples)")
     logger.info(f"Expired (Neither hit):     {expired/total_samples:.2%} ({expired:,} samples)")

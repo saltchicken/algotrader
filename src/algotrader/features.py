@@ -46,6 +46,7 @@ def merge_financials(
     """
     Loads Polygon quarterly financials and merges them with Alpaca daily pricing data.
     Uses merge_asof on the filing_date to prevent look-ahead bias.
+    Financial metrics are converted to Quarter-over-Quarter percent change.
     """
     fin_path = os.path.join(polygon_dir, symbol, "financials.json")
 
@@ -100,17 +101,32 @@ def merge_financials(
 
     fin_df = pd.DataFrame(records)
 
-    # 2. Sort financial data by filing date (required for merge_asof)
+    # 2. Sort financial data by filing date (required for calculating pct_change and merge_asof)
     fin_df = fin_df.sort_values("filing_date").dropna(subset=["filing_date"])
 
-    # 3. Prepare Alpaca dataframe
+    # 3. Convert absolute financial metrics to Quarter-over-Quarter (QoQ) percent changes
+    financial_cols = [
+        "revenue", "net_income", "operating_expenses", 
+        "assets", "liabilities", "equity", "net_cash_flow"
+    ]
+    
+    for col in financial_cols:
+        if col in fin_df.columns:
+            fin_df[f"{col}_pct_change"] = fin_df[col].pct_change()
+            # Drop the raw absolute values to normalize data across differently sized companies
+            fin_df.drop(columns=[col], inplace=True)
+    
+    # Clean up any potential infinite values caused by division by zero (e.g. going from 0 to positive)
+    fin_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+
+    # 4. Prepare Alpaca dataframe
     # Ensure index is a proper datetime index and strictly sorted
     alpaca_df = alpaca_df.copy()
     if not isinstance(alpaca_df.index, pd.DatetimeIndex):
         alpaca_df.index = pd.to_datetime(alpaca_df.index)
     alpaca_df = alpaca_df.sort_index()
 
-    # 4. Point-in-time merge
+    # 5. Point-in-time merge
     # This matches the Alpaca row's index (timestamp) with the most recent filing_date
     # strictly BEFORE or ON the trading day. This prevents lookahead bias and inherently
     # forward-fills missing quarters.
