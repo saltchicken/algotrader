@@ -68,7 +68,7 @@ def handle_train(args):
         df = build_targets(df, horizons=[horizon], thresholds=[0.05, 0.10, 0.20])
 
         # Drop the last 'horizon' rows because we don't know their future outcomes yet
-        df.dropna(subset=[f"return_future_{horizon}d"], inplace=True)
+        df.dropna(subset=[f"max_return_future_{horizon}d"], inplace=True)
 
         dataframes[symbol] = df
 

@@ -24,26 +24,28 @@ def build_targets(
         logger.error("Dataframe is missing 'close' column required for target calculation.")
         return df
 
-    for h in horizons:
-        # 1. Shift the close price backwards to align future prices with today's row
-        future_col = f"close_future_{h}d"
-        df[future_col] = df["close"].shift(-h)
+    # Use 'high' for the rolling max if it exists to catch intraday target hits, otherwise fallback to 'close'
+    ref_col = "high" if "high" in df.columns else "close"
 
-        # 2. Calculate the future percentage return
-        return_col = f"return_future_{h}d"
-        df[return_col] = (df[future_col] - df["close"]) / df["close"]
+    for h in horizons:
+        # 1. Use a forward rolling window to find the maximum price over the next 'h' days
+        indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=h)
+        future_max = df[ref_col].shift(-1).rolling(window=indexer, min_periods=1).max()
+
+        # 2. Calculate the maximum percentage return achieved at any point during the window
+        return_col = f"max_return_future_{h}d"
+        df[return_col] = (future_max - df["close"]) / df["close"]
 
         # 3. Create binary classification targets for each threshold
+        valid_horizon_mask = df["close"].shift(-h).notna()
+
         for t in thresholds:
             target_col = f"target_{h}d_{int(t*100)}pct"
             
-            # 1 if return >= threshold, else 0
+            # 1 if max return >= threshold, else 0
             df[target_col] = (df[return_col] >= t).astype(float)
             
             # Re-apply NaNs to the end of the dataset so we don't treat missing future data as a "0" (False)
-            df.loc[df[return_col].isna(), target_col] = pd.NA
-
-    # Optional: Drop the intermediate future_close column if we only care about the return/targets
-    df.drop(columns=[f"close_future_{h}d" for h in horizons], inplace=True)
+            df.loc[~valid_horizon_mask, target_col] = pd.NA
 
     return df
