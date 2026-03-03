@@ -1,73 +1,98 @@
 import pandas as pd
+import numpy as np
 from algotrader.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-def build_targets(
+def build_bracket_targets(
     df: pd.DataFrame,
-    horizons: list = [21],
-    thresholds: list = [0.05, 0.10, 0.20],
-    loss_thresholds: list = [-0.05, -0.10, -0.20],
+    horizon: int = 21,
+    take_profit: float = 0.10,
+    stop_loss: float = -0.05,
 ) -> pd.DataFrame:
     """
-    Builds target variables for future stock returns.
+    Builds target variables by simulating a bracket order.
+    For each day, simulates buying at 'close' and setting a take profit and stop loss.
+    Checks the subsequent 'horizon' days to see which is hit first.
+
+    Outcomes:
+      1: Take Profit hit first
+     -1: Stop Loss hit first
+      0: Neither hit (expired at horizon)
 
     Args:
-        df: DataFrame containing Alpaca market data with a 'close' column.
-        horizons: List of integers representing future trading days (e.g., 21 days ~ 1 month).
-        thresholds: List of float thresholds for positive target returns (e.g., 0.05 = 5%).
-        loss_thresholds: List of float thresholds for negative target returns (e.g., -0.05 = -5%).
+        df: DataFrame containing Alpaca market data ('close', 'high', 'low').
+        horizon: Number of trading days to hold the position.
+        take_profit: Take profit percentage (e.g., 0.10 for +10%).
+        stop_loss: Stop loss percentage (e.g., -0.05 for -5%).
 
     Returns:
-        DataFrame with new target columns appended.
+        DataFrame with new bracket target columns appended.
     """
     df = df.copy()
 
     if "close" not in df.columns:
         logger.error(
-            "Dataframe is missing 'close' column required for target calculation."
+            "Dataframe is missing 'close' column required for bracket calculation."
         )
         return df
 
-    # Use 'high' for rolling max and 'low' for rolling min to catch intraday target hits
-    high_col = "high" if "high" in df.columns else "close"
-    low_col = "low" if "low" in df.columns else "close"
+    # Use NumPy arrays for massive speedup when scanning look-ahead windows
+    closes = df["close"].values
+    highs = df["high"].values if "high" in df.columns else closes
+    lows = df["low"].values if "low" in df.columns else closes
 
-    for h in horizons:
-        # 1. Use a forward rolling window to find the max and min prices over the next 'h' days
-        indexer = pd.api.indexers.FixedForwardWindowIndexer(window_size=h)
+    n = len(df)
+    outcomes = np.full(n, np.nan)
+    returns = np.full(n, np.nan)
+    durations = np.full(n, np.nan)
 
-        future_max = df[high_col].shift(-1).rolling(window=indexer, min_periods=1).max()
-        future_min = df[low_col].shift(-1).rolling(window=indexer, min_periods=1).min()
+    for i in range(n - horizon):
+        entry_price = closes[i]
+        
+        # Skip invalid prices
+        if pd.isna(entry_price) or entry_price <= 0:
+            continue
 
-        # 2. Calculate the max positive return and max drawdown achieved during the window
-        max_return_col = f"max_return_future_{h}d"
-        min_return_col = f"min_return_future_{h}d"
+        tp_price = entry_price * (1 + take_profit)
+        sl_price = entry_price * (1 + stop_loss)
 
-        df[max_return_col] = (future_max - df["close"]) / df["close"]
-        df[min_return_col] = (future_min - df["close"]) / df["close"]
+        # Look ahead window: tomorrow up to horizon days out
+        window_highs = highs[i + 1 : i + 1 + horizon]
+        window_lows = lows[i + 1 : i + 1 + horizon]
 
-        # 3. Create binary classification targets for each threshold
-        valid_horizon_mask = df["close"].shift(-h).notna()
+        tp_hits = window_highs >= tp_price
+        sl_hits = window_lows <= sl_price
 
-        for t in thresholds:
-            target_col = f"target_{h}d_{int(t*100)}pct"
+        # Find the first index where conditions are met.
+        # np.argmax returns the first True. If no True exists, we default to the horizon length.
+        tp_idx = np.argmax(tp_hits) if np.any(tp_hits) else horizon
+        sl_idx = np.argmax(sl_hits) if np.any(sl_hits) else horizon
 
-            # 1 if max return >= threshold, else 0
-            df[target_col] = (df[max_return_col] >= t).astype(float)
+        if tp_idx == horizon and sl_idx == horizon:
+            # Neither hit within the horizon. Trade closes at the end of the window.
+            exit_price = closes[i + horizon]
+            outcomes[i] = 0
+            returns[i] = (exit_price - entry_price) / entry_price
+            durations[i] = horizon
+            
+        elif sl_idx <= tp_idx:
+            # Stop loss hit first, or both hit on the very same day.
+            # We conservatively assume the SL triggered first on a volatile day.
+            outcomes[i] = -1
+            returns[i] = stop_loss
+            durations[i] = sl_idx + 1
+            
+        else:
+            # Take profit hit first!
+            outcomes[i] = 1
+            returns[i] = take_profit
+            durations[i] = tp_idx + 1
 
-            # Re-apply NaNs to the end of the dataset
-            df.loc[~valid_horizon_mask, target_col] = pd.NA
-
-        for t in loss_thresholds:
-            # 1 if min return <= negative threshold, else 0
-            # E.g., target_63d_loss_5pct
-            target_col = f"target_{h}d_loss_{abs(int(t*100))}pct"
-
-            df[target_col] = (df[min_return_col] <= t).astype(float)
-
-            # Re-apply NaNs to the end of the dataset
-            df.loc[~valid_horizon_mask, target_col] = pd.NA
+    # Append our features back into the dataframe
+    df[f"bracket_outcome_{horizon}d"] = outcomes
+    df[f"bracket_return_{horizon}d"] = returns
+    df[f"bracket_duration_{horizon}d"] = durations
 
     return df

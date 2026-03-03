@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 from algotrader.logger import get_logger
-from algotrader.features import build_targets
+from algotrader.features import build_bracket_targets
 
 logger = get_logger(__name__)
 
@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 def setup_parser(subparsers):
     """Sets up the argparse subparser for the 'train' command."""
     parser = subparsers.add_parser(
-        "train", help="Train the ML model on local historical dataset"
+        "train", help="Train the ML model simulating bracket orders on historical data"
     )
 
     parser.add_argument(
@@ -30,6 +30,18 @@ def setup_parser(subparsers):
         default=63,
         help="Lookahead horizon in trading days for target creation (e.g., 21 for 1 month, 63 for 3 months)",
     )
+    parser.add_argument(
+        "--take-profit",
+        type=float,
+        default=0.10,
+        help="Take profit percentage for the simulated bracket order (e.g., 0.10 for +10%)",
+    )
+    parser.add_argument(
+        "--stop-loss",
+        type=float,
+        default=-0.05,
+        help="Stop loss percentage for the simulated bracket order (e.g., -0.05 for -5%)",
+    )
 
     parser.set_defaults(func=handle_train)
 
@@ -38,6 +50,9 @@ def handle_train(args):
     """Handler for the 'train' command."""
     logger.info(
         f"Starting training process using dataset directory: {args.dataset_dir}"
+    )
+    logger.info(
+        f"Bracket Order Settings -> Horizon: {args.horizon} days | TP: {args.take_profit:.1%} | SL: {args.stop_loss:.1%}"
     )
 
     if not os.path.exists(args.dataset_dir):
@@ -56,6 +71,8 @@ def handle_train(args):
     logger.info(f"Found {len(csv_files)} historical data files. Loading dataset...")
 
     horizon = args.horizon
+    take_profit = args.take_profit
+    stop_loss = args.stop_loss
 
     # Load local data
     dataframes = {}
@@ -64,13 +81,23 @@ def handle_train(args):
         file_path = os.path.join(args.dataset_dir, file_name)
         df = pd.read_csv(file_path, index_col=0, parse_dates=True)
 
-        # Build Targets based on the dynamically provided horizon
-        df = build_targets(df, horizons=[horizon], thresholds=[0.05, 0.10, 0.20], loss_thresholds=[-0.05, -0.10, -0.20])
+        # Build Targets simulating a bracket order using the new features logic
+        df = build_bracket_targets(
+            df, 
+            horizon=horizon, 
+            take_profit=take_profit, 
+            stop_loss=stop_loss
+        )
 
         # Drop the last 'horizon' rows because we don't know their future outcomes yet
-        df.dropna(subset=[f"max_return_future_{horizon}d"], inplace=True)
+        df.dropna(subset=[f"bracket_outcome_{horizon}d"], inplace=True)
+        
+        if not df.empty:
+            dataframes[symbol] = df
 
-        dataframes[symbol] = df
+    if not dataframes:
+        logger.error("No valid dataset remaining after bracket generation and dropping NaNs.")
+        return
 
     logger.info(
         f"Successfully loaded and processed targets for {len(dataframes)} symbols."
@@ -78,14 +105,22 @@ def handle_train(args):
 
     # Show a quick summary of the target distributions to ensure it worked
     all_data = pd.concat(dataframes.values())
-    logger.info(f"=== {horizon}-Day Target Distributions ===")
-    logger.info(f"Total historical samples: {len(all_data):,}")
-    logger.info(f"Hit Target 5%:  {all_data[f'target_{horizon}d_5pct'].mean():.2%}")
-    logger.info(f"Hit Target 10%: {all_data[f'target_{horizon}d_10pct'].mean():.2%}")
-    logger.info(f"Hit Target 20%: {all_data[f'target_{horizon}d_20pct'].mean():.2%}")
-    logger.info(f"Hit Loss 5%:    {all_data[f'target_{horizon}d_loss_5pct'].mean():.2%}")
-    logger.info(f"Hit Loss 10%:   {all_data[f'target_{horizon}d_loss_10pct'].mean():.2%}")
-    logger.info(f"Hit Loss 20%:   {all_data[f'target_{horizon}d_loss_20pct'].mean():.2%}")
+    
+    outcome_col = f"bracket_outcome_{horizon}d"
+    total_samples = len(all_data)
+    tp_hits = (all_data[outcome_col] == 1).sum()
+    sl_hits = (all_data[outcome_col] == -1).sum()
+    expired = (all_data[outcome_col] == 0).sum()
+    avg_return = all_data[f"bracket_return_{horizon}d"].mean()
+    avg_duration = all_data[f"bracket_duration_{horizon}d"].mean()
+
+    logger.info(f"=== {horizon}-Day Bracket Order Outcomes ===")
+    logger.info(f"Total historical samples:  {total_samples:,}")
+    logger.info(f"Hit Take Profit (+{take_profit:.1%}): {tp_hits/total_samples:.2%} ({tp_hits:,} samples)")
+    logger.info(f"Hit Stop Loss   ({stop_loss:.1%}): {sl_hits/total_samples:.2%} ({sl_hits:,} samples)")
+    logger.info(f"Expired (Neither hit):     {expired/total_samples:.2%} ({expired:,} samples)")
+    logger.info(f"Average Bracket Return:    {avg_return:.2%}")
+    logger.info(f"Average Trade Duration:    {avg_duration:.1f} days")
 
     # Ensure the models directory exists
     os.makedirs("models", exist_ok=True)
