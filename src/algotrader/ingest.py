@@ -31,7 +31,7 @@ def setup_parser(subparsers):
     )
 
     # Default to 1 year ago for start date
-    default_start = (datetime.now() - timedelta(days=730)).strftime("%Y-%m-%d")
+    default_start = (datetime.now() - timedelta(days=1825)).strftime("%Y-%m-%d")
     default_end = datetime.now().strftime("%Y-%m-%d")
 
     parser.add_argument(
