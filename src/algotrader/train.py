@@ -65,7 +65,7 @@ def handle_train(args):
         df = pd.read_csv(file_path, index_col=0, parse_dates=True)
 
         # Build Targets based on the dynamically provided horizon
-        df = build_targets(df, horizons=[horizon], thresholds=[0.05, 0.10, 0.20])
+        df = build_targets(df, horizons=[horizon], thresholds=[0.05, 0.10, 0.20], loss_thresholds=[-0.05, -0.10, -0.20])
 
         # Drop the last 'horizon' rows because we don't know their future outcomes yet
         df.dropna(subset=[f"max_return_future_{horizon}d"], inplace=True)
@@ -83,6 +83,9 @@ def handle_train(args):
     logger.info(f"Hit Target 5%:  {all_data[f'target_{horizon}d_5pct'].mean():.2%}")
     logger.info(f"Hit Target 10%: {all_data[f'target_{horizon}d_10pct'].mean():.2%}")
     logger.info(f"Hit Target 20%: {all_data[f'target_{horizon}d_20pct'].mean():.2%}")
+    logger.info(f"Hit Loss 5%:    {all_data[f'target_{horizon}d_loss_5pct'].mean():.2%}")
+    logger.info(f"Hit Loss 10%:   {all_data[f'target_{horizon}d_loss_10pct'].mean():.2%}")
+    logger.info(f"Hit Loss 20%:   {all_data[f'target_{horizon}d_loss_20pct'].mean():.2%}")
 
     # Ensure the models directory exists
     os.makedirs("models", exist_ok=True)
